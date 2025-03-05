@@ -1,21 +1,30 @@
 import numpy as np
 
 class linear():
-    def __init__():
-        print("unimplemented")
+    def __init__(self, n: int, m: int):
+        r = np.random.uniform(-1, 1, size=(n * m))
+        self.A = r.reshape(n, m)
+
+    def __call__(self, x):
+        x = np.dot(x.T, self.A)
+        return x.T
 
 # Neural Network base class
 # Defines the general structure of a neural network and all essential functionality
-class nn():
-    def __init__():
-        print("unimplemented")
+class net():
+    def __init__(self, n: int, h: int, m: int):
+        self.fc1 = linear(n, h)
+        self.fc2 = linear(h, h)
+        self.fc3 = linear(h, m)
 
+    def forward(self, x):
+        x = self.relu(self.fc1(x))
+        x = self.relu(self.fc2(x))
+        x = self.softmax(self.fc3(x))
+        return x
 
-    def linear():
-         print("unimplemented")
-    
     # Uses stochastic gradient descent 
-    def gradient(self):
+    def gradient(self, x, y):
         x
 
     # Applies results of loss 
@@ -38,6 +47,10 @@ class nn():
         s = y - x
         return np.square(s).sum()
 
+    @staticmethod
+    def cross_entropy(p, q):
+       return 
+
 def test():
     print("Test ReLU...")
     x = np.array([-1, 0, 1])
@@ -52,9 +65,6 @@ def test():
     print("Testing softmax...")
     y = nn.softmax(x)
     print(f"Softmax results = {y}")
-
-    #assert(np.array_equal(y, np.array([0.09003057, 0.24472847, 0.66524096])))
-    print("Softmax is working")
 
     print("Testing least squares...")
     y = np.array([-2, 1, 2])
