@@ -35,34 +35,6 @@ class Language():
 
         print(f"Generated a new vobulary of size {self.corpus_size}")
 
-    # One-hot encode a given word based on the existing known vobulary
-    # Returns an exception if the word provided to it is unknown
-    def hot_encode(self, x):
-
-        x = re.split(self.delimiters, x)[0]
-
-        try:
-            index = self.vocabulary.index(x)
-        except ValueError:
-            raise Exception(f"Item '{x}' is not in the vocabulary")
-
-        hot = np.zeros(shape=(1, self.corpus_size))
-        hot[0][index] = 1
-
-        return hot
-
-    # Pass the softmaxed results of the NN to randomly select a word from the vocabulary treating the value of each element in the output as a probability
-    def get_likely_word(self, x):
-        x = x.flatten()
-        i = np.random.choice(len(x), p=x)
-        
-        item = None
-
-        try:
-            item = self.vocabulary[i]
-        except IndexError:
-            raise Exception(f"List out of range error in corpus. Index '{i}' not in vocabulary of size {self.corpus_size}")
-
     # Get the index of a word in the vocab
     def get_word_index(self, x):
         index = 0

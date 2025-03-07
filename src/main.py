@@ -19,17 +19,17 @@ def train(file, corpus_size, data, nn, epochs, lr=0.01, batch_size=32):
             x[np.arange(batch_size_actual), targets] = 1
 
             y = nn.forward(x)
-            vec = nn.softmax(y)
+            out = nn.softmax(y)
 
             y_true = np.zeros_like(y)
             for j in range(batch_size_actual):
                 y_true[j, contexts[j]] = 1.0 / len(contexts[j])
 
-            loss = -np.sum(y_true * np.log(vec + 1e-8)) / batch_size_actual
+            loss = nn.cross_entropy(out, y_true, batch_size_actual)
             epoch_loss += loss
 
-            d = (vec - y_true) / batch_size_actual
-
+            # Initial d is equal to the gradients of softmax + cross entropy
+            d = (out - y_true) / batch_size_actual
             nn.gradient(d, lr)
 
         print(f"epoch {epoch + 1}/{epochs}, loss: {epoch_loss / len(data)}")
@@ -46,13 +46,28 @@ def train(file, corpus_size, data, nn, epochs, lr=0.01, batch_size=32):
         ax.legend()
         ax.grid(True)
 
-        #plt.tight_layout()
         plt.savefig('loss_epoch_graph.png')
         plt.close()
 
+def test_similarity(nn, lang, left, right):
+    try:
+        word1 = lang.get_word_index(left)
+        word2 = lang.get_word_index(right)
+    except KeyError as e:
+        print(f"KeyError: {e} is not in vocabulary")
+        exit()
+
+    embed1 = nn.fc1.A[word1]
+    embed2 = nn.fc1.A[word2]
+
+    dot = np.dot(embed1, embed2)
+    cos = dot / (np.linalg.norm(embed1) * np.linalg.norm(embed2))
+
+    print(f"Words {left}, {right} have a dot product of {dot:.2f}. Their cosine is {cos:.2f}")
+
 def main():
     #np.set_printoptions(threshold=sys.maxsize)
-    training_file = "scene1.txt"
+    training_file = "../scene1.txt"
     epochs = 10
     window_size = 10
 
@@ -60,11 +75,14 @@ def main():
     lang.read(training_file)
     data = lang.build_dataset(training_file, 2)
 
-    nn = net(lang.corpus_size, lang.corpus_size, lang.corpus_size * 2)
+    nn = net(lang.corpus_size, lang.corpus_size * 4, lang.corpus_size * 16)
 
     train(training_file, lang.corpus_size, data, nn, epochs, lr=0.1, batch_size=32)
 
-    #person1 = nn.forward()
-    
+    test_similarity(nn, lang, "horatio", "marcellus")
+    test_similarity(nn, lang, "horatio", "says")
+    test_similarity(nn, lang, "fair", "gross")
+
+
 if __name__ == "__main__":
     main()

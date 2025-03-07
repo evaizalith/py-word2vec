@@ -31,6 +31,8 @@ def nanlog(func):
 
     return wrapper
 
+# linear layer
+# xA + b = y
 class linear():
     def __init__(self, n: int, m: int):
         self.A = np.random.uniform(-1, 1, (n, m))
@@ -49,7 +51,6 @@ class linear():
         grad_A = self.x.T @ d
         grad_b = d.sum(axis=0, keepdims=True)
         
-        #print(f"d{l} : {d}")
         dx = d @ self.A.T
 
         self.A -= grad_A * lr
@@ -57,6 +58,8 @@ class linear():
 
         return dx
 
+# Rectified linear unit
+# if x < 0; y = 0. Else y = x
 class ReLU():
     def forward(self, z):
         self.mask = (z > 0).astype(float)
@@ -73,18 +76,12 @@ class ReLU():
 class net():
     def __init__(self, n: int, h: int, m: int):
         self.fc1 = linear(n, h)
-        self.relu1 = ReLU()
-        self.fc2 = linear(h, h)
-        self.relu2 = ReLU()
         self.fc3 = linear(h, m)
 
     @nanlog
     def forward(self, x):
         x = self.fc1(x)
         x = self.fc3(x)
-        #x = self.relu1(self.fc1(x))
-        #x = self.relu2(self.fc2(x))
-        #x = self.softmax(self.fc3(x))
         return x
 
     # Uses stochastic gradient descent and applies loss
@@ -92,9 +89,6 @@ class net():
     def gradient(self, d, lr):
         # Each call to Linear.backward() calculates the gradient of the layer, applies it, and then returns it so that the next layer can use it as the basis for its own gradient calculations
         d = self.fc3.backward(d, lr, 3)
-        #d = self.relu2.backward(d)
-        #d = self.fc2.backward(d, lr, 2)
-        #d = self.relu1.backward(d)
         d = self.fc1.backward(d, lr, 1)
 
     @staticmethod
@@ -117,5 +111,5 @@ class net():
 
     @staticmethod
     @nanlog
-    def cross_entropy(x, y):
-       return -np.sum((1 - x) * np.log(y + 1e-8)) 
+    def cross_entropy(x, y, batch_size):
+       return -np.sum((y) * np.log(x + 1e-8)) / batch_size 
