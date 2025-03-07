@@ -36,8 +36,8 @@ class Language():
         except ValueError:
             raise Exception(f"Item '{x}' is not in the vocabulary")
 
-        hot = np.zeros(shape=(self.corpus_size, 1))
-        hot[index] = 1
+        hot = np.zeros(shape=(1, self.corpus_size))
+        hot[0][index] = 1
 
         return hot
 
