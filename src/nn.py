@@ -1,4 +1,5 @@
 import numpy as np
+import random
 
 # Decorator to check for NaN values in numpy arrays sent to and returned from functions
 # Used to help debug 
@@ -27,6 +28,7 @@ def nanlog(func):
             print(f"Array from func '{func}' contains NaN: {result}")
 
         return result
+
     return wrapper
 
 class linear():
@@ -36,14 +38,16 @@ class linear():
         self.x = None
 
     def __call__(self, x):
+        x = np.atleast_2d(x)
         self.x = x 
         x = np.dot(x, self.A) + self.b
         return x
 
     # Calculate and apply gradient for this layer then pass on new derivative to next layer 
     def backward(self, d, lr, l):
+        d = np.atleast_2d(d)
         grad_A = self.x.T @ d
-        grad_b = d.sum(axis=0)
+        grad_b = d.sum(axis=0, keepdims=True)
         
         #print(f"d{l} : {d}")
         dx = d @ self.A.T
@@ -76,33 +80,28 @@ class net():
 
     @nanlog
     def forward(self, x):
-        x = self.relu1(self.fc1(x))
-        x = self.relu2(self.fc2(x))
-        x = self.softmax(self.fc3(x))
+        x = self.fc1(x)
+        x = self.fc3(x)
+        #x = self.relu1(self.fc1(x))
+        #x = self.relu2(self.fc2(x))
+        #x = self.softmax(self.fc3(x))
         return x
 
     # Uses stochastic gradient descent and applies loss
     @nanlog
-    def gradient(self, x, y_pred, y_true, loss, lr):
-        # Derivative of softmax + cross entropy
-        d = y_pred - y_true
-        print(f"y_pred: {y_pred}")
-        print(f"y_true: {y_true}")
-        print(f"Initial d: {d}")
-
+    def gradient(self, d, lr):
         # Each call to Linear.backward() calculates the gradient of the layer, applies it, and then returns it so that the next layer can use it as the basis for its own gradient calculations
         d = self.fc3.backward(d, lr, 3)
-        d = self.relu2.backward(d)
-        d = self.fc2.backward(d, lr, 2)
-        d = self.relu1.backward(d)
+        #d = self.relu2.backward(d)
+        #d = self.fc2.backward(d, lr, 2)
+        #d = self.relu1.backward(d)
         d = self.fc1.backward(d, lr, 1)
 
     @staticmethod
     @nanlog
     def softmax(z):
-        #print(z)
-        e = np.exp(z - np.max(z))
-        sigma = e / e.sum()
+        e = np.exp(z - np.max(z, axis=1, keepdims=True))
+        sigma = e / e.sum(axis=1, keepdims=True)
 
         return sigma 
 
@@ -120,28 +119,3 @@ class net():
     @nanlog
     def cross_entropy(x, y):
        return -np.sum((1 - x) * np.log(y + 1e-8)) 
-
-def test():
-    print("Test ReLU...")
-    x = np.array([-1, 0, 1])
-    y = nn.relu(x)
-
-    print(f"x = {x}")
-    print(f"ReLU results = {y}")
-
-    assert(np.array_equal(y, np.array([0, 0, 1])))
-    print("ReLU is working")
-
-    print("Testing softmax...")
-    y = nn.softmax(x)
-    print(f"Softmax results = {y}")
-
-    print("Testing least squares...")
-    y = np.array([-2, 1, 2])
-    z = nn.least_squares(x, y)
-    print(f"Least squares results = {z}")
-    assert(z == 2)
-    print("least squares is working")
-
-if __name__ == "__main__":
-    test()

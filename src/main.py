@@ -4,61 +4,67 @@ from corpus import Language
 import sys
 import io
 import traceback
+import matplotlib.pyplot as plt
 
-def train(file, lang, nn, lr=0.01):
-    try:
-        with io.open(file, 'r', encoding='utf-8') as file:
-            text = file.read()
-            words = text.split()
+def train(file, corpus_size, data, nn, epochs, lr=0.01, batch_size=32):
+    losses = []
+    for epoch in range(epochs):
+        epoch_loss = 0
+        for i in range(0, len(data), batch_size):
+            batch = data[i:i+batch_size]
+            targets, contexts = zip(*batch)
 
-    except Exception as e:
-        print(f"Error in train: {e}")
-        traceback.print_exec()
+            batch_size_actual = len(targets)
+            x = np.zeros((batch_size_actual, corpus_size))
+            x[np.arange(batch_size_actual), targets] = 1
 
-    try:
-        prev = ""
+            y = nn.forward(x)
+            vec = nn.softmax(y)
 
-        losses = []
+            y_true = np.zeros_like(y)
+            for j in range(batch_size_actual):
+                y_true[j, contexts[j]] = 1.0 / len(contexts[j])
 
-        for word in words:
-            if prev == "":
-                prev = word
+            loss = -np.sum(y_true * np.log(vec + 1e-8)) / batch_size_actual
+            epoch_loss += loss
 
-                x = lang.hot_encode(prev)
-                y_t = lang.hot_encode(word)
+            d = (vec - y_true) / batch_size_actual
 
-                y_p = nn.forward(x)
-                loss = nn.cross_entropy(y_p, y_t)
+            nn.gradient(d, lr)
 
-                nn.gradient(x, y_p, y_t, loss, lr)
-    
-                losses.append(loss)
+        print(f"epoch {epoch + 1}/{epochs}, loss: {epoch_loss / len(data)}")
+        losses.append((epoch_loss / len(data)))
 
-                pred = lang.get_likely_word(y_p)
-                print(f"pred: {pred}, true: {word}, loss: {loss}")
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.set_xlabel('Epochs')
+        ax.set_ylabel('Loss')
+        ax.set_title('Loss vs. Epochs')
+        ax.set_xlim(0, epochs)
 
-                prev = word
+        plt.plot(range(len(losses)), losses, color='blue', linewidth=2, label='Training Loss')
 
-        avg_loss = sum(losses) / len(losses)
-        return avg_loss
+        ax.legend()
+        ax.grid(True)
 
-    except Exception as e:
-        print(f"Error in lower train: {e}")
-        traceback.print_exc()
+        #plt.tight_layout()
+        plt.savefig('loss_epoch_graph.png')
+        plt.close()
 
 def main():
     #np.set_printoptions(threshold=sys.maxsize)
     training_file = "scene1.txt"
+    epochs = 10
+    window_size = 10
 
     lang = Language()
     lang.read(training_file)
+    data = lang.build_dataset(training_file, 2)
 
-    #nn = net(lang.corpus_size, lang.corpus_size // 2, 10)
-    nn = net(lang.corpus_size, lang.corpus_size, lang.corpus_size)
+    nn = net(lang.corpus_size, lang.corpus_size, lang.corpus_size * 2)
 
-    for i in range(10):
-        epoch_loss = train(training_file, lang, nn, 10)
-        print(f"Average epoch loss for epoch {i} is: {epoch_loss}")
+    train(training_file, lang.corpus_size, data, nn, epochs, lr=0.1, batch_size=32)
+
+    #person1 = nn.forward()
     
 if __name__ == "__main__":
     main()
